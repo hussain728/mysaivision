@@ -1,0 +1,19 @@
+Processing data/gas_station.mp4  (2274 frames, 1280x720 @ 30.0 fps)
+Keeping classes: ['backpack', 'bicycle', 'bus', 'car', 'handbag', 'motorcycle', 'person', 'suitcase', 'truck']
+
+[frame  400/2274] 14.5 fps | running counts -> bus:1, car:123, person:143
+[frame  800/2274] 14.4 fps | running counts -> bus:22, car:816, motorcycle:41, person:306, truck:73
+[frame 1200/2274] 14.6 fps | running counts -> bus:22, car:1376, motorcycle:41, person:338, truck:73
+[frame 1600/2274] 14.7 fps | running counts -> bus:25, car:1443, motorcycle:41, person:339, truck:77
+[frame 2000/2274] 14.7 fps | running counts -> bus:25, car:1872, motorcycle:69, person:473, truck:77
+
+================ FINAL CLASS COUNTS (total detections) ================
+  car            1872   (vehicle)
+  person          473   (person)
+  truck            77   (vehicle)
+  motorcycle       69   (vehicle)
+  bus              25   (vehicle)
+
+frames with >=1 kept detection: 1206/2270
+annotated video: outputs/gas_station_mp4v.mp4
+note: counts are per-frame detection counts, not unique objects (object tracking is a later phase).

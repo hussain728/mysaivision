@@ -150,10 +150,25 @@ Result on a retail-store CCTV clip (1452 frames, 1270×720, from `data/clip.mp4`
 [`outputs/clip_annotated.mp4`](outputs/clip_annotated.mp4); a still is at
 [`outputs/clip_sample_frame.jpg`](outputs/clip_sample_frame.jpg).
 
+A second clip — a gas station at night (2270 frames, 1280×720, `data/gas_station.mp4`)
+— exercises the **vehicle** classes:
+
+| class      | total detections | category |
+|------------|-----------------:|----------|
+| car        | 1,872            | vehicle  |
+| person     | 473              | person   |
+| truck      | 77               | vehicle  |
+| motorcycle | 69               | vehicle  |
+| bus        | 25               | vehicle  |
+
+Annotated video: [`outputs/gas_station_annotated.mp4`](outputs/gas_station_annotated.mp4);
+still: [`outputs/gas_station_sample_frame.jpg`](outputs/gas_station_sample_frame.jpg).
+Cars and a motorcycle are detected reliably even in low night light.
+
 > Counts are per-frame **detection** counts, not unique objects — object
-> tracking / de-duplication is a later phase. The annotated `.mp4` is a compact
-> H.264 transcode (via the `imageio-ffmpeg` static binary); the input footage in
-> `data/` is git-ignored.
+> tracking / de-duplication is a later phase. Annotated `.mp4`s are compact
+> H.264 transcodes (via the `imageio-ffmpeg` static binary); input footage in
+> `data/` and raw `outputs/*_mp4v.mp4` intermediates are git-ignored.
 
 ## Not in this phase
 

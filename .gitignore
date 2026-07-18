@@ -15,5 +15,8 @@ data/*.mp4
 data/*.avi
 data/*.mov
 
+# Raw pre-transcode video intermediates (replaced by the committed H.264 output)
+outputs/*_mp4v.mp4
+
 # YOLOX demo scratch output
 YOLOX_outputs/
