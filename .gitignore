@@ -1,0 +1,14 @@
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# YOLOX upstream clone (fetched by scripts/setup_phase1.sh)
+third_party/YOLOX/
+
+# Large model weights (regenerated/downloaded by the setup script)
+*.pth
+*.pth.tar
+
+# YOLOX demo scratch output
+YOLOX_outputs/

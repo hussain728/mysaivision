@@ -1,0 +1,27 @@
+# Store Vision — Phase 1 (YOLOX -> ONNX detection core) dependencies.
+#
+# IMPORTANT: do NOT `pip install -r YOLOX/requirements.txt`. It pins
+# onnx-simplifier==0.4.10, which builds a C++ extension and fails without
+# cmake. We do not need onnx-simplifier for Phase 1 (export with --no-onnxsim).
+#
+# Install these explicitly, then install YOLOX itself with:
+#     pip install --no-deps -e third_party/YOLOX
+#
+# NOTE on torch: PyPI's default torch is the CUDA build but runs fine on CPU.
+# The CPU-only index (download.pytorch.org) is blocked in some sandboxes.
+
+numpy<2                 # YOLOX/older cv paths assume the numpy 1.x ABI
+torch
+torchvision
+onnx
+onnxruntime
+opencv-python-headless  # headless twin of opencv-python (no libGL needed on servers)
+loguru
+tqdm
+tabulate
+thop
+
+# Needed by YOLOX's import chain even for export/inference-only use
+# (yolox.utils.metric imports psutil; yolox.data imports pycocotools):
+psutil
+pycocotools
