@@ -10,5 +10,10 @@ third_party/YOLOX/
 *.pth
 *.pth.tar
 
+# Input footage (user-provided; keep source video out of git)
+data/*.mp4
+data/*.avi
+data/*.mov
+
 # YOLOX demo scratch output
 YOLOX_outputs/

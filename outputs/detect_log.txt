@@ -1,0 +1,20 @@
+Processing data/clip.mp4  (1454 frames, 1270x720 @ 13.1 fps)
+Keeping classes: ['backpack', 'bicycle', 'bus', 'car', 'handbag', 'motorcycle', 'person', 'suitcase', 'truck']
+
+[frame  200/1454]  3.6 fps | running counts -> backpack:1, handbag:80, person:2086
+[frame  400/1454]  3.6 fps | running counts -> backpack:1, handbag:223, person:4195
+[frame  600/1454]  3.6 fps | running counts -> backpack:2, handbag:342, person:5964
+[frame  800/1454]  3.6 fps | running counts -> backpack:11, handbag:484, person:7981
+[frame 1000/1454]  3.9 fps | running counts -> backpack:13, handbag:656, person:9626
+[frame 1200/1454]  4.4 fps | running counts -> backpack:16, handbag:713, person:11402, suitcase:6
+[frame 1400/1454]  4.9 fps | running counts -> backpack:28, handbag:1180, person:13129, suitcase:6
+
+================ FINAL CLASS COUNTS (total detections) ================
+  person      13597   (person)
+  handbag      1325   (box-like)
+  backpack       28   (box-like)
+  suitcase        6   (box-like)
+
+frames with >=1 kept detection: 1452/1452
+annotated video: outputs/clip_annotated.mp4
+note: counts are per-frame detection counts, not unique objects (object tracking is a later phase).

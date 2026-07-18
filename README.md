@@ -119,6 +119,42 @@ PYTHONPATH=third_party/YOLOX python scripts/run_inference.py \
   `models/yolox_s.onnx` and the annotated `outputs/dog.jpg` are committed so the
   result is directly inspectable.
 
+## Video detection on real footage
+
+`scripts/detect_video.py` runs the same ONNX pipeline over a video, keeping only
+the Store Vision classes, drawing labelled boxes + confidence, writing an
+annotated video, and printing a running per-class count.
+
+```bash
+PYTHONPATH=third_party/YOLOX python scripts/detect_video.py \
+  --model models/yolox_s.onnx --video data/clip.mp4 \
+  --output outputs/clip_annotated.mp4 --score 0.35
+```
+
+Kept classes: `person`, `car`, `truck`, `bus`, `motorcycle`, `bicycle`, and
+box-like stand-ins (`suitcase`, `backpack`, `handbag`). COCO-80 has **no literal
+"box"/"packet" class**, so boxy/parcel-shaped COCO classes stand in on the
+pretrained model; real box/packet detection is the light fine-tuning the SPEC
+calls out for later.
+
+Result on a retail-store CCTV clip (1452 frames, 1270×720, from `data/clip.mp4`):
+
+| class    | total detections | category |
+|----------|-----------------:|----------|
+| person   | 13,597           | person   |
+| handbag  | 1,325            | box-like |
+| backpack | 28               | box-like |
+| suitcase | 6                | box-like |
+
+(No vehicles — it's an indoor store.) Annotated video:
+[`outputs/clip_annotated.mp4`](outputs/clip_annotated.mp4); a still is at
+[`outputs/clip_sample_frame.jpg`](outputs/clip_sample_frame.jpg).
+
+> Counts are per-frame **detection** counts, not unique objects — object
+> tracking / de-duplication is a later phase. The annotated `.mp4` is a compact
+> H.264 transcode (via the `imageio-ffmpeg` static binary); the input footage in
+> `data/` is git-ignored.
+
 ## Not in this phase
 
 Live RTSP ingestion, zones/lines/counting, theft rules + SQLite, announcements,
