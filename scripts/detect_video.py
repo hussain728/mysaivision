@@ -90,20 +90,34 @@ def main() -> None:
     ap.add_argument("--input-shape", default="640,640")
     ap.add_argument("--log-every", type=int, default=100, help="frames between running-count logs")
     ap.add_argument("--classes", default=None,
-                    help="comma-separated COCO class names to keep (overrides the default "
+                    help="comma-separated class names to keep (overrides the default "
                          "person/vehicle/box-like set). e.g. --classes bottle,cup,book,handbag")
+    ap.add_argument("--class-names-file", default=None,
+                    help="text file of class names (one per line) for a custom/fine-tuned "
+                         "model whose classes differ from COCO. Defaults to the 80 COCO names.")
     args = ap.parse_args()
 
     h, w = (int(x) for x in args.input_shape.split(","))
     input_shape = (h, w)
 
+    # class names: COCO by default, or a custom list for a fine-tuned model
+    if args.class_names_file:
+        with open(args.class_names_file) as f:
+            class_names = [ln.strip() for ln in f
+                           if ln.strip() and not ln.strip().startswith("#")]
+    else:
+        class_names = list(COCO_CLASSES)
+
     if args.classes:
         wanted = {c.strip() for c in args.classes.split(",") if c.strip()}
-        unknown = wanted - set(COCO_CLASSES)
+        unknown = wanted - set(class_names)
         if unknown:
-            raise SystemExit(f"unknown COCO class(es): {sorted(unknown)}")
-        keep_ids = {i for i, n in enumerate(COCO_CLASSES) if n in wanted}
+            raise SystemExit(f"unknown class(es) for this model: {sorted(unknown)}")
+        keep_ids = {i for i, n in enumerate(class_names) if n in wanted}
         keep_names = wanted
+    elif args.class_names_file:
+        keep_ids = set(range(len(class_names)))   # custom model: keep all its classes
+        keep_names = set(class_names)
     else:
         keep_ids = KEEP_IDS
         keep_names = KEEP
@@ -140,9 +154,9 @@ def main() -> None:
         if boxes is not None:
             frames_with_det += 1
             for cid in cls:
-                counts[COCO_CLASSES[int(cid)]] += 1
+                counts[class_names[int(cid)]] += 1
             frame = vis(frame, boxes, scores, cls,
-                        conf=args.score, class_names=COCO_CLASSES)
+                        conf=args.score, class_names=class_names)
 
         writer.write(frame)
 

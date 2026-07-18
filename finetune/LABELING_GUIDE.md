@@ -12,13 +12,16 @@ You already have **221 frames** extracted to `finetune/images_to_label/`
 
 ## 0. Your setup (decided)
 
-- **Classes: `box` and `packet`** — 2 classes (id 0 = box, id 1 = packet), as in
-  `finetune/classes.txt`.
-- **Two-model setup**: this fine-tune covers **only box/packet**. Person and
-  vehicles keep coming from the existing COCO model (`models/yolox_s.onnx`) — the
-  runtime will run both models and merge the results, so you do **not** label
-  people or vehicles here.
+- **One combined model, 8 classes**: person, bicycle, car, motorcycle, bus,
+  truck, box, packet (`finetune/classes.txt`).
+- **You hand-label ONLY `box` and `packet`.** Person + vehicle boxes are
+  generated automatically by the existing COCO model
+  (`finetune/scripts/autolabel_coco.py`) and merged into the dataset for you — so
+  you never draw a person or a car. Draw only your inventory.
 - **Tool: Label Studio** (local, private).
+
+> Even though the final model detects 8 classes, your labeling job is still just
+> the 2 inventory classes. The auto-labels handle the rest.
 
 > Distinguishing *which* exact product (SKU-level) is Phase 10 in the SPEC and
 > needs far more data. `box`/`packet` are the coarse, robust classes to start.
