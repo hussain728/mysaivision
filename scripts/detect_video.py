@@ -51,8 +51,10 @@ def build_session(model_path: str) -> onnxruntime.InferenceSession:
     )
 
 
-def detect(session, frame, input_shape, score_thr, nms_thr):
+def detect(session, frame, input_shape, score_thr, nms_thr, keep_ids=None):
     """Return (boxes_xyxy, scores, cls_ids) for kept classes, or (None, None, None)."""
+    if keep_ids is None:
+        keep_ids = KEEP_IDS
     img, ratio = preprocess(frame, input_shape)
     out = session.run(None, {session.get_inputs()[0].name: img[None, :, :, :]})[0]
     preds = demo_postprocess(out, input_shape)[0]
@@ -72,7 +74,7 @@ def detect(session, frame, input_shape, score_thr, nms_thr):
         return None, None, None
 
     b, s, c = dets[:, :4], dets[:, 4], dets[:, 5].astype(int)
-    mask = np.array([cid in KEEP_IDS for cid in c], dtype=bool)
+    mask = np.array([cid in keep_ids for cid in c], dtype=bool)
     if not mask.any():
         return None, None, None
     return b[mask], s[mask], c[mask]
@@ -87,10 +89,24 @@ def main() -> None:
     ap.add_argument("--nms", type=float, default=0.45)
     ap.add_argument("--input-shape", default="640,640")
     ap.add_argument("--log-every", type=int, default=100, help="frames between running-count logs")
+    ap.add_argument("--classes", default=None,
+                    help="comma-separated COCO class names to keep (overrides the default "
+                         "person/vehicle/box-like set). e.g. --classes bottle,cup,book,handbag")
     args = ap.parse_args()
 
     h, w = (int(x) for x in args.input_shape.split(","))
     input_shape = (h, w)
+
+    if args.classes:
+        wanted = {c.strip() for c in args.classes.split(",") if c.strip()}
+        unknown = wanted - set(COCO_CLASSES)
+        if unknown:
+            raise SystemExit(f"unknown COCO class(es): {sorted(unknown)}")
+        keep_ids = {i for i, n in enumerate(COCO_CLASSES) if n in wanted}
+        keep_names = wanted
+    else:
+        keep_ids = KEEP_IDS
+        keep_names = KEEP
 
     session = build_session(args.model)
 
@@ -112,7 +128,7 @@ def main() -> None:
     t0 = time.time()
     idx = 0
     print(f"Processing {args.video}  ({total} frames, {W}x{H} @ {fps:.1f} fps)")
-    print(f"Keeping classes: {sorted(KEEP)}\n")
+    print(f"Keeping classes: {sorted(keep_names)}\n")
 
     while True:
         ok, frame = cap.read()
@@ -120,7 +136,7 @@ def main() -> None:
             break
         idx += 1
 
-        boxes, scores, cls = detect(session, frame, input_shape, args.score, args.nms)
+        boxes, scores, cls = detect(session, frame, input_shape, args.score, args.nms, keep_ids)
         if boxes is not None:
             frames_with_det += 1
             for cid in cls:
