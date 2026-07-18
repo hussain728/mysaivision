@@ -18,5 +18,13 @@ data/*.mov
 # Raw pre-transcode video intermediates (replaced by the committed H.264 output)
 outputs/*_mp4v.mp4
 
+# Fine-tuning data: frames/label exports/dataset images (privacy — customer
+# faces — and large/derived). Keep scripts, guides, and classes.txt tracked.
+finetune/images_to_label/
+finetune/label_export/
+finetune/dataset/train2017/
+finetune/dataset/val2017/
+finetune/dataset/annotations/
+
 # YOLOX demo scratch output
 YOLOX_outputs/
