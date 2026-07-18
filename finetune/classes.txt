@@ -1,5 +1,2 @@
-# One class name per line, no spaces (use _ ). Order = class id (0-based).
-# Edit this to YOUR products, then follow finetune/LABELING_GUIDE.md.
-# Example starting point (delete these and add your own):
 box
 packet

@@ -10,22 +10,18 @@ You already have **221 frames** extracted to `finetune/images_to_label/`
 
 ---
 
-## 0. Before you click: decide your classes
+## 0. Your setup (decided)
 
-Keep the class list **small and consistent** — a light fine-tune on ~250 frames
-can't learn 30 fine-grained SKUs. Good starting points:
-
-- Simplest / most robust: **`box`** and **`packet`** (2 classes).
-- If specific products matter and look distinct: name them, e.g.
-  `chips_bag`, `soda_bottle`, `cereal_box` — but budget ~80–150 boxes *per class*,
-  so more classes = more labeling.
-
-Write your final list, one per line, into `finetune/classes.txt`. The order
-there defines the class **id** order used everywhere downstream (0-based).
+- **Classes: `box` and `packet`** — 2 classes (id 0 = box, id 1 = packet), as in
+  `finetune/classes.txt`.
+- **Two-model setup**: this fine-tune covers **only box/packet**. Person and
+  vehicles keep coming from the existing COCO model (`models/yolox_s.onnx`) — the
+  runtime will run both models and merge the results, so you do **not** label
+  people or vehicles here.
+- **Tool: Label Studio** (local, private).
 
 > Distinguishing *which* exact product (SKU-level) is Phase 10 in the SPEC and
-> needs far more data. For now, prefer coarse classes that you can label
-> consistently.
+> needs far more data. `box`/`packet` are the coarse, robust classes to start.
 
 ---
 
@@ -77,9 +73,9 @@ identifiable customers unless you're comfortable with that.
   boxes, different lighting. Skipping hard cases = a model that fails on them.
 - **Be consistent**: same object type → always the same class. Inconsistent
   labels are worse than fewer labels.
-- **Don't label** person/car/etc. **unless** we're building one combined model
-  (see the question I'll ask you). If we run a separate inventory model, you only
-  label your products here.
+- **Do NOT label** person / car / any COCO object — only `box` and `packet`.
+  Those other classes come from the existing model; labeling them here would be
+  wasted effort.
 - Aim for a rough balance — if one class has 400 boxes and another has 15, the
   rare one won't learn. Extract/label more frames containing the rare one.
 
