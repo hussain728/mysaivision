@@ -18,6 +18,10 @@ data/*.mov
 # Raw pre-transcode video intermediates (replaced by the committed H.264 output)
 outputs/*_mp4v.mp4
 
+# RTSP camera snapshots (runtime output; may contain identifiable people)
+outputs/rtsp/
+outputs/rtsp_test/
+
 # Fine-tuning data: frames/label exports/dataset images (privacy — customer
 # faces — and large/derived). Keep scripts, guides, and classes.txt tracked.
 finetune/images_to_label/
