@@ -58,3 +58,6 @@ venv/
 # Test footage: keep the folder, ignore its (large/private) contents
 /test_footage/*
 !/test_footage/.gitkeep
+
+# YOLOX upstream clone inside the agent (fetched by setup; regenerable)
+agent/YOLOX/
