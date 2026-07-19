@@ -61,3 +61,9 @@ venv/
 
 # YOLOX upstream clone inside the agent (fetched by setup; regenerable)
 agent/YOLOX/
+
+# Generated demo/preview images under agent/ (regenerable; may contain footage
+# frames of people). Agent CODE (*.py) stays tracked.
+agent/*.jpg
+agent/*.png
+agent/label_preview/
