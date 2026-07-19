@@ -1,6 +1,6 @@
 # Store Vision — Phase 1: YOLOX detection core (ONNX)
 
-> Scope: **Phase 1 only** of the [build spec](SPEC.md) — get YOLOX detecting
+> Scope: **Phase 1 only** of the [build spec](docs/SPEC.md) — get YOLOX detecting
 > **person / vehicle / box** objects and running through **ONNX Runtime**.
 > Later phases (camera ingestion, zones/counting, theft rules, cloud, dashboard)
 > are intentionally **not** built here.
@@ -31,7 +31,14 @@ Phase-1 **vehicle** classes (bicycle, truck) with high confidence; `person` and
 
 ```
 .
-├── SPEC.md                     # full 8-phase build spec (Phase 1 is this repo)
+├── docs/                       # full planning set — the source of truth
+│   ├── PRD.md                  #   product requirements
+│   ├── SPEC.md                 #   build spec (8 phases; Phase 1 is this repo)
+│   ├── TRD.md                  #   engineering contract (perf, security, gates)
+│   ├── FLOWS.md                #   app + software sequences
+│   ├── DESIGN.md               #   UI/UX brief
+│   ├── SCHEMA.md               #   Postgres/Supabase schema
+│   └── IMPLEMENTATION.md       #   phased execution plan
 ├── requirements-phase1.txt     # explicit deps (NOT YOLOX/requirements.txt)
 ├── requirements-phase1.lock.txt# exact pinned versions used
 ├── scripts/
@@ -39,9 +46,9 @@ Phase-1 **vehicle** classes (bicycle, truck) with high confidence; `person` and
 │   ├── run_inference.py        # ONNX inference + prints classes/scores
 │   └── torch213_export_onnx.patch  # torch>=2.9 fix for YOLOX export script
 ├── models/
-│   └── yolox_s.onnx            # exported model (yolox_s.pth is git-ignored)
+│   └── yolox_s.onnx            # exported model (git-ignored; setup script builds it)
 ├── outputs/
-│   └── dog.jpg                 # annotated proof image
+│   └── dog.jpg                 # annotated proof image (small stills stay tracked)
 └── third_party/YOLOX/          # upstream clone (git-ignored)
 ```
 
@@ -115,9 +122,10 @@ PYTHONPATH=third_party/YOLOX python scripts/run_inference.py \
   `torch.onnx.export(..., dynamo=False)` (legacy TorchScript exporter).
 - **Extra deps** beyond the spec's list (`psutil`, `pycocotools`) are pulled in
   by YOLOX's import chain even for export/inference-only use.
-- Large binaries (`*.pth`, the YOLOX clone, `.venv`) are git-ignored; the 35 MB
-  `models/yolox_s.onnx` and the annotated `outputs/dog.jpg` are committed so the
-  result is directly inspectable.
+- Large binaries (`*.pth`, `*.onnx`, the YOLOX clone, `.venv`, annotated `.mp4`s)
+  are git-ignored to keep the repo light. `scripts/setup_phase1.sh` rebuilds the
+  35 MB `models/yolox_s.onnx` end to end; small annotated `.jpg` proof stills
+  (e.g. `outputs/dog.jpg`) stay tracked so results are directly inspectable.
 
 ## Video detection on real footage
 
@@ -146,9 +154,10 @@ Result on a retail-store CCTV clip (1452 frames, 1270×720, from `data/clip.mp4`
 | backpack | 28               | box-like |
 | suitcase | 6                | box-like |
 
-(No vehicles — it's an indoor store.) Annotated video:
-[`outputs/clip_annotated.mp4`](outputs/clip_annotated.mp4); a still is at
-[`outputs/clip_sample_frame.jpg`](outputs/clip_sample_frame.jpg).
+(No vehicles — it's an indoor store.) A still is at
+[`outputs/clip_sample_frame.jpg`](outputs/clip_sample_frame.jpg); the full
+annotated video (`outputs/clip_annotated.mp4`) is regenerated locally by the
+command above and is git-ignored.
 
 A second clip — a gas station at night (2270 frames, 1280×720, `data/gas_station.mp4`)
 — exercises the **vehicle** classes:
@@ -161,8 +170,8 @@ A second clip — a gas station at night (2270 frames, 1280×720, `data/gas_stat
 | motorcycle | 69               | vehicle  |
 | bus        | 25               | vehicle  |
 
-Annotated video: [`outputs/gas_station_annotated.mp4`](outputs/gas_station_annotated.mp4);
-still: [`outputs/gas_station_sample_frame.jpg`](outputs/gas_station_sample_frame.jpg).
+Still: [`outputs/gas_station_sample_frame.jpg`](outputs/gas_station_sample_frame.jpg)
+(the full `outputs/gas_station_annotated.mp4` is regenerated locally and git-ignored).
 Cars and a motorcycle are detected reliably even in low night light.
 
 > Counts are per-frame **detection** counts, not unique objects — object
@@ -173,5 +182,5 @@ Cars and a motorcycle are detected reliably even in low night light.
 ## Not in this phase
 
 Live RTSP ingestion, zones/lines/counting, theft rules + SQLite, announcements,
-cloud API, dashboard, and any fine-tuning — those are Phases 2–8 in `SPEC.md`.
+cloud API, dashboard, and any fine-tuning — those are Phases 2–8 in `docs/SPEC.md`.
 Phases 9–10 (gesture-based shoplifting, SKU recognition) are deferred entirely.
