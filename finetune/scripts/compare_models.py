@@ -30,11 +30,13 @@ from yolox.data.data_augment import preproc as preprocess
 from yolox.data.datasets import COCO_CLASSES
 from yolox.utils import demo_postprocess, multiclass_nms
 
-SPURIOUS = {
-    "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra",
-    "giraffe", "teddy bear", "knife", "fork", "spoon", "bowl", "wine glass",
-    "cup", "scissors", "banana", "apple", "sandwich", "cake",
+# Spurious = COCO classes implausible in a store/forecourt (the complement of a
+# small "plausible" set). Catches night hallucinations like train/book/tv/chair.
+PLAUSIBLE = {
+    "person", "bicycle", "car", "motorcycle", "bus", "truck",
+    "backpack", "handbag", "suitcase", "umbrella", "bottle",
 }
+SPURIOUS = set(COCO_CLASSES) - PLAUSIBLE
 
 
 def load_classes(path):

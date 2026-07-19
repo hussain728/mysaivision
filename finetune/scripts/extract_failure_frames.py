@@ -35,13 +35,15 @@ from yolox.data.data_augment import preproc as preprocess
 from yolox.data.datasets import COCO_CLASSES
 from yolox.utils import demo_postprocess, multiclass_nms
 
-# Classes that should essentially never appear in a store/forecourt. A detection
-# of one of these is almost certainly a false positive worth training against.
-DEFAULT_SPURIOUS = {
-    "bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra",
-    "giraffe", "teddy bear", "knife", "fork", "spoon", "bowl", "wine glass",
-    "cup", "scissors", "banana", "apple", "sandwich", "cake",
+# A detection outside this "plausible in a store/forecourt" set is almost
+# certainly a false positive worth training against. Defining spurious as the
+# COMPLEMENT catches night hallucinations we'd never enumerate by hand
+# (train, book, tv, chair, traffic light, airplane, toilet ...).
+PLAUSIBLE = {
+    "person", "bicycle", "car", "motorcycle", "bus", "truck",
+    "backpack", "handbag", "suitcase", "umbrella", "bottle",
 }
+DEFAULT_SPURIOUS = set(COCO_CLASSES) - PLAUSIBLE
 BOX_LIKE = {"handbag", "backpack", "suitcase"}
 PERSON_ID = COCO_CLASSES.index("person")
 
@@ -80,8 +82,8 @@ def main():
     ap.add_argument("--nms", type=float, default=0.45)
     ap.add_argument("--tsize", type=int, default=640)
     ap.add_argument("--stride", type=int, default=3, help="analyze every Nth frame")
-    ap.add_argument("--night-brightness", type=float, default=70.0,
-                    help="mean luma (0-255) below which a frame is 'night'")
+    ap.add_argument("--night-brightness", type=float, default=100.0,
+                    help="mean luma (0-255) below which a frame counts as dark/night")
     ap.add_argument("--small-person-frac", type=float, default=0.12,
                     help="person bbox height < this fraction of frame = 'far'")
     ap.add_argument("--cap-fp", type=int, default=80)
@@ -138,7 +140,10 @@ def main():
             bucket = None
             if spurious:
                 bucket = "false_positive"
-            elif brightness < args.night_brightness and (weak_person or far_person):
+            elif (weak_person or far_person) and brightness < args.night_brightness:
+                # a near-missed (weak) or small/far person in a DARK frame ->
+                # the night+distance failure. Brightness gate keeps this bucket
+                # night-focused (bright daytime crowds are a different case).
                 bucket = "night_distant"
             elif boxlike:
                 bucket = "boxes"
