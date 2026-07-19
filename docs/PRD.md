@@ -96,7 +96,10 @@ v1 includes the full platform. **Internal build order still ships theft first** 
 see Section 10 — but v1 is not "done" until all four capability areas work.
 
 ### 6.1 Theft & Loss Detection (PRIMARY)
-- Detect people and vehicles on live camera feeds
+- Detect people and vehicles on live camera feeds — **works on the pretrained model,
+  no training required**
+- **Object tracking (ByteTrack)** for persistent IDs — required for open-hours
+  behavioral rules and accurate counting
 - **Zones**: user-drawn regions per camera, typed `restricted` / `monitored` / `count`
 - **Schedule**: per-site open/closed hours
 - **Rules**: restricted zone = alert any time; monitored zone = alert when closed;
@@ -163,7 +166,7 @@ hidden. Alert the owner if one stays down past a threshold.
 
 | Deferred | Why |
 |---|---|
-| Gesture-based shoplifting detection (concealment) | Different, hard AI problem; needs custom-trained model. Competitor moat. Phase 9. |
+| Gesture-based shoplifting detection (concealment) | Different, hard AI problem; needs custom-trained model. Competitor moat. Phase 9. Tier 1+2 rules (SPEC §6) catch more of a small store's actual shrink anyway. |
 | SKU/product-level recognition | Needs per-product training. "Count objects" ships; "identify products" waits. Phase 10. |
 | SMS/voice alerts | Push (FCM) is free and sufficient for v1. Twilio costs money per message. |
 | Facial recognition | Deliberate permanent exclusion. Privacy/legal risk, unnecessary. |

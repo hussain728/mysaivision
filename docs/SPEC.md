@@ -163,15 +163,46 @@ if higher resolution evidence is wanted.
 
 ## 3. Detection — What The Model Detects
 
-One YOLOX model, keep these COCO classes:
-- **person**
-- **vehicles**: car, truck, bus, motorcycle, bicycle
-- **inventory objects**: box, and packet-like items. NOTE: generic "box" works
-  from the pretrained model; YOUR specific packets/products may need light
-  fine-tuning on ~200-300 labeled photos (done free on Google Colab). Start with
-  pretrained, fine-tune only where it misses.
+One YOLOX model. It detects **objects only** — never "theft." Theft is produced by
+rules layered on top (Section 6), not by the model.
 
-Everything below is built on top of these detections.
+### 3.1 Available from the pretrained model (COCO, zero training)
+
+| Class | Used for |
+|---|---|
+| `person` | **Theft/loss detection — the core class** |
+| `car`, `truck`, `bus`, `motorcycle`, `bicycle` | Drive-offs, lot/dock monitoring, vehicle counts |
+| `handbag`, `backpack`, `suitcase` | Concealment context ("entered with no bag, has one now") |
+| `bottle`, `cup`, `bowl` | Limited product-adjacent signals |
+
+**Consequence: your #1 priority — theft/loss — needs NO fine-tuning.** Person and
+vehicle detection work out of the box. Build Phases 1–4 on the pretrained model.
+
+### 3.2 Requires fine-tuning (NOT in COCO)
+
+**COCO has no `box` or `packet` class.** Shipping boxes, product packets, cartons,
+and your specific SKUs are not in the pretrained model and will never be detected
+without training.
+
+To get inventory counting you must:
+1. Capture ~200–300 frames of your actual boxes/packets on real shelves
+2. Label them (Label Studio or CVAT, both free)
+3. Fine-tune YOLOX on Google Colab's free GPU
+4. Re-export to ONNX
+
+**Sequencing verdict:** ship theft/loss on the pretrained model first. Treat
+inventory counting as a second pass after Phase 4 works, because it carries a
+multi-day labeling cost that theft detection does not.
+
+### 3.3 Object tracking (required for open-hours rules)
+
+Frame-by-frame detection cannot tell whether the person in frame 100 is the same
+person from frame 40. Any rule involving **time or movement** — dwell, loitering,
+exit-without-register, entered-with/left-with — needs persistent IDs.
+
+Add **ByteTrack** (or BoT-SORT) in Phase 3. It assigns each detection a stable
+`track_id` across frames. Without it, after-hours and restricted-zone rules still
+work, but every open-hours behavioral rule is impossible.
 
 ---
 
@@ -216,23 +247,61 @@ direction. Used for receiving-door item counts and entrance people counts.
 
 ## 6. Alert Rules (theft/loss heart)
 
+Rules are grouped by what they need. **Tier 1 ships first — it needs no tracking and
+catches a large share of real loss.** Tier 2 needs tracking (Section 3.3). Tier 3 is
+deferred entirely.
+
+### 6.1 TIER 1 — Ships in Phase 4. No tracking required.
+
 ```
 should_alert(zone, detection, now):
     if detection.class == "person":
-        if zone.type == "restricted": return True          # any time
+        if zone.type == "restricted": return True          # ANY time — incl. open hours
         if zone.type == "monitored":  return is_closed_hours(now)
     if detection.class in VEHICLES and zone.type == "restricted":
-        return is_closed_hours(now)                          # dock/lot after hours
+        return is_closed_hours(now)                         # dock/lot after hours
     return False
 ```
 
-**Cooldown/debounce (critical):** after an alert for a `(camera, zone)` pair,
-suppress further alerts for that pair for `cooldown_minutes` (default 5). Events
-are still logged during cooldown; only the push is suppressed. One person in a
-zone = one alert, not fifty.
+| Rule | Fires when | Catches |
+|---|---|---|
+| **After-hours presence** | Person in a `monitored` zone while closed | Break-ins, off-hours internal theft |
+| **Restricted zone — any time** | Person in stockroom / cash office / behind counter | **Internal theft during open hours.** The strongest open-hours rule that needs no tracking. |
+| **Vehicle at dock after hours** | Vehicle in a `restricted` lot/dock zone while closed | Unauthorized removal |
+| **Low stock count** | `count` zone falls below `min_count` | Sweep theft, restock need |
 
-**Low-count alert (inventory):** if a `count` zone's object count drops below a
-configurable threshold, optionally fire a "low stock" announcement.
+**Cooldown/debounce (critical):** after an alert for a `(camera, zone)` pair,
+suppress further alerts for that pair for `cooldown_minutes` (default 5). Events are
+still logged; only the push is suppressed. One person in a zone = one alert, not
+fifty.
+
+### 6.2 TIER 2 — Open-hours behavioral rules. Requires ByteTrack. Second pass.
+
+These make the product useful *during business hours*, when a person simply being
+present is normal.
+
+| Rule | Logic | Catches |
+|---|---|---|
+| **Dwell / loitering** | same `track_id` inside a zone > N minutes | Casing, cooler lingering |
+| **Exit without register** | `track_id` crosses the exit line having never entered the register zone | Walk-outs — a real heuristic with no gesture AI |
+| **Bag state change** | person had no `handbag`/`backpack` on entry, has one later | Concealment context |
+| **Group entry** | ≥4 `track_id`s cross the entry line within N seconds | Organized retail crime (often groups) |
+| **Rapid stock drop** | `count` zone falls sharply while a person is present | Grab-and-run |
+
+**Tune conservatively.** These are heuristics, not certainties — they will produce
+false positives if thresholds are aggressive. Every one of them must respect the
+Gate 8 rule: under 1 false alert per site per week.
+
+### 6.3 TIER 3 — Deferred to Phase 9. Do not attempt in v1.
+
+**Gesture-based concealment detection** — recognizing the physical act of hiding an
+item while shopping. This is a fundamentally different AI problem requiring a model
+trained on years of real theft footage. It is the incumbent's moat (Veesion has built
+it since 2018). Attempting it in v1 will consume months and produce nothing shippable.
+
+**The honest framing:** for after-hours loss and internal theft — which is where much
+of a small store's shrink actually comes from — Tiers 1 and 2 catch more than gesture
+detection would.
 
 ---
 
@@ -607,10 +676,13 @@ Do everything up to Phase 8 on your OWN home camera. It is free and instant.
 1. **Multi-object detection core** — YOLOX (ONNX) detecting person, vehicle, and
    box/packet on a video clip. Prove on real footage. Fine-tune only if it misses.
 2. **Live camera ingestion** — read 5-6 RTSP streams, round-robin sampling.
-3. **Zones + lines + counting** — point-in-polygon zones, counting lines, and
-   count logic (boxes, people, cars). This unlocks inventory + analytics.
-4. **Theft/loss rules + logging** — schedule, alert rules, cooldown, SQLite.
-   THEFT ALERTS GO LIVE HERE (your first priority, working).
+3. **Zones + lines + counting + TRACKING** — point-in-polygon zones, counting lines,
+   count logic, and **ByteTrack for persistent track_ids** (Section 3.3). Tracking is
+   required for all Tier 2 open-hours rules and for accurate counting (without it you
+   double-count the same person every frame).
+4. **Theft/loss rules + logging** — schedule, **Tier 1 alert rules (Section 6.1)**,
+   cooldown, SQLite. THEFT ALERTS GO LIVE HERE (your first priority, working).
+   Tier 2 open-hours rules come as a second pass after Tier 1 is trustworthy.
 5. **Announcements** — automatic push alerts (FCM) + staff message board.
 6. **Cloud spine** — Supabase schema + RLS, Vercel API routes for /events and
    /counts, agent sync with offline buffering. No billing yet.
@@ -630,10 +702,11 @@ After Phase 8: roll to 4-5 more of the 17 sites, log dollars saved, then raise.
 
 - **Phase 9 — Gesture-based shoplifting detection** (spotting item concealment).
   A different, hard AI problem needing a custom-trained model. Veesion's moat.
-  Build only after the core platform is proven and earning.
+  Build only after the core platform is proven and earning. See Section 6.3.
 - **Phase 10 — SKU / product-level recognition** (identifying WHICH product, not
-  just "a box"). Needs custom training per product. "Count objects" is Phase 3;
-  "identify exact products" waits.
+  just "a box"). Needs custom training per product.
+  NOTE: even generic box/packet detection needs fine-tuning (Section 3.2) — COCO has
+  no box class. Theft/loss works pretrained; inventory does not.
 
 Also later: Stripe billing + subscription tiers, self-serve installer, SMS/voice
 alerts, multi-tenant onboarding polish, exotic NPU chip support.
