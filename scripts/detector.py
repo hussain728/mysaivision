@@ -36,12 +36,56 @@ import onnxruntime
 
 from yolox.data.data_augment import preproc as preprocess
 from yolox.data.datasets import COCO_CLASSES
-from yolox.utils import demo_postprocess, multiclass_nms, vis
+from yolox.utils import demo_postprocess, multiclass_nms
 
-PERSON_ID = COCO_CLASSES.index("person")
+# --- DESIGN §2.5 detection overlay palette (BGR for OpenCV) ----------------
+# Color encodes meaning first, class second. Confident detections take their
+# class color; sub-threshold ones render grey 1px with no label (debug-visible,
+# feel-invisible). Alert amber (#FFB347) and confirmed-theft red (#FF5C4D) are
+# applied by the agent once zones + verdicts exist (Phase 4+), not here.
+_C = {
+    "person":    (255, 168, 78),   # #4EA8FF blue
+    "vehicle":   (250, 139, 167),  # #A78BFA violet
+    "bag":       (182, 114, 244),  # #F472B6 pink
+    "inventory": (191, 212, 45),   # #2DD4BF teal
+    "weak":      (128, 114, 107),  # #6B7280 grey — low-confidence / unmapped
+}
+_GROUP = {"person": "person"}
+_GROUP.update({n: "vehicle" for n in ("car", "truck", "bus", "motorcycle", "bicycle")})
+_GROUP.update({n: "bag" for n in ("handbag", "backpack", "suitcase")})
+_GROUP.update({n: "inventory" for n in ("box", "packet")})
 
 
-def analyze(model, video, output, score_thr, low_thr, nms_thr, input_size, draw):
+def _label(img, x, y, text, color):
+    """Dark chip + colored text, matching the DESIGN mock."""
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_DUPLEX, 0.5, 1)
+    y0 = max(0, y - th - 8)
+    cv2.rectangle(img, (x, y0), (x + tw + 8, y0 + th + 8), (24, 20, 16), -1)
+    cv2.putText(img, text, (x + 4, y0 + th + 3),
+                cv2.FONT_HERSHEY_DUPLEX, 0.5, color, 1, cv2.LINE_AA)
+
+
+def draw_detections(frame, dets, class_names, score_thr):
+    """Render detections per DESIGN §2.5: class color + label for confident
+    detections, grey 1px (no label) for sub-threshold ones."""
+    for x1, y1, x2, y2, score, cls in dets:
+        ci = int(cls)
+        name = class_names[ci] if ci < len(class_names) else str(ci)
+        p1, p2 = (int(x1), int(y1)), (int(x2), int(y2))
+        if score < score_thr:
+            cv2.rectangle(frame, p1, p2, _C["weak"], 1)      # low-confidence
+            continue
+        group = _GROUP.get(name)
+        color = _C[group] if group else _C["weak"]           # unmapped -> grey
+        cv2.rectangle(frame, p1, p2, color, 2)
+        _label(frame, int(x1), int(y1), f"{name} {score:.2f}", color)
+    return frame
+
+
+def analyze(model, video, output, score_thr, low_thr, nms_thr, input_size, draw,
+            class_names=None):
+    names = list(class_names) if class_names else list(COCO_CLASSES)
+    pid = names.index("person") if "person" in names else -1
     sess = onnxruntime.InferenceSession(model, providers=["CPUExecutionProvider"])
     in_name = sess.get_inputs()[0].name
 
@@ -95,10 +139,10 @@ def analyze(model, video, output, score_thr, low_thr, nms_thr, input_size, draw)
 
         # per-class totals (strong only)
         for c in cls[strong]:
-            class_totals[COCO_CLASSES[c]] += 1
+            class_totals[names[c]] += 1
 
         # person stats
-        is_person = cls == PERSON_ID
+        is_person = cls == pid
         strong_person = is_person & strong
         weak_person = is_person & (conf < score_thr)  # low_thr<=conf<score_thr
         person_confs.extend(conf[strong_person].tolist())
@@ -108,11 +152,8 @@ def analyze(model, video, output, score_thr, low_thr, nms_thr, input_size, draw)
                                 round(float(conf[weak_person].max()), 3)))
 
         if writer is not None:
-            m = strong
-            vis_img = vis(frame.copy(), dets[m, :4], dets[m, 4],
-                          dets[m, 5].astype(int), conf=score_thr,
-                          class_names=COCO_CLASSES)
-            writer.append_data(cv2.cvtColor(vis_img, cv2.COLOR_BGR2RGB))
+            annotated = draw_detections(frame.copy(), dets, names, score_thr)
+            writer.append_data(cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB))
 
         idx += 1
 
@@ -156,6 +197,9 @@ def main():
     ap.add_argument("--low", type=float, default=0.10)
     ap.add_argument("--nms", type=float, default=0.45)
     ap.add_argument("--tsize", type=int, default=640)
+    ap.add_argument("--classes", default=None,
+                    help="class-names file (one per line); default COCO-80. "
+                         "Use finetune/classes.txt for the fine-tuned model.")
     ap.add_argument("--no-draw", action="store_true")
     args = ap.parse_args()
 
@@ -164,8 +208,15 @@ def main():
         base = os.path.splitext(args.video)[0]
         output = f"{base}__annotated.mp4"
 
+    class_names = None
+    if args.classes:
+        with open(args.classes) as f:
+            class_names = [ln.strip() for ln in f
+                           if ln.strip() and not ln.strip().startswith("#")]
+
     r = analyze(args.model, args.video, output, args.score, args.low,
-                args.nms, (args.tsize, args.tsize), draw=not args.no_draw)
+                args.nms, (args.tsize, args.tsize), draw=not args.no_draw,
+                class_names=class_names)
     print(json.dumps(r, indent=2))
 
 
