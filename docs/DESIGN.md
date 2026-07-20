@@ -98,6 +98,40 @@ his own pattern — "every incident is between 1am and 4am, and camera 3 keeps d
 It encodes real information rather than decorating, and it's the thing people will
 remember and screenshot.
 
+### 2.5 Detection box colors (overlay rendering)
+
+**The principle: color encodes meaning first, class second.** A person in the
+aisle at 2pm and a person in the stockroom at 2am are identical to the model but
+opposite to the owner. The box has to show that instantly — so **class color is
+the default, and alert state overrides it.**
+
+**Class colors (a normal, non-alerting detection):**
+
+| Class | Token | Color | Why this color |
+|---|---|---|---|
+| person | `--det-person` | `#4EA8FF` clear blue | Reads against both night-IR grey and daylight |
+| vehicle | `--det-vehicle` | `#A78BFA` violet | Distinct from person at a glance |
+| bag | `--det-bag` | `#F472B6` pink | Kept separate — it's concealment *context*, not a subject |
+| inventory | `--det-inventory` | `#2DD4BF` teal | Operational, not threatening |
+| low-confidence | `--det-weak` | `#6B7280` grey | 1px, **no label**; visible for debugging, invisible in feel |
+
+**Alert state overrides all of it.** The moment a detection fires an alert, its
+box becomes **sodium amber `#FFB347`** with a **thicker stroke** and the **zone
+name in the label**. Amber is the alert color across the entire product, so it
+**must never appear on a normal detection** — the instant it decorates, it stops
+meaning anything.
+
+**Red `#FF5C4D` is reserved** for events a human has confirmed as real theft
+(verdict = `real`). Never used for a live/unreviewed detection.
+
+```
+draw priority (highest wins):
+  confirmed theft   → red    #FF5C4D, thick, label = case #
+  alerting          → amber  #FFB347, thick, label = zone name
+  normal detection  → class color above, 2px, label = class
+  low-confidence    → grey   #6B7280, 1px, no label
+```
+
 ---
 
 ## 3. Website (marketing)
