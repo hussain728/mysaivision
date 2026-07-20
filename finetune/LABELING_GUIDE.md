@@ -8,8 +8,8 @@ This guide fixes **three specific failures** in the current model:
 | 2 | **Misses people past ~15 ft at night** | Small, low-contrast people fall below the confidence threshold | **Hand-label the missed people** in dark frames → it learns to detect them |
 | 3 | **Doesn't detect product boxes** | COCO has no `box`/`packet` class | Draw `box`/`packet` on your inventory → it learns your two new classes |
 
-You train **one** model with **8 classes** (`finetune/classes.txt`): `person,
-bicycle, car, motorcycle, bus, truck, box, packet`.
+You train **one** model with **6 classes** (`finetune/classes.txt`): `person,
+car, truck, box, packet, bag`.
 
 > **Important change from the old plan:** the old guide said "only hand-label
 > box/packet; let the COCO model auto-label people." That auto-labeler keeps
@@ -72,9 +72,11 @@ class you care about** (`person`, `box`, `packet`). Night frames give lots of
   blurry, dark, far-away ones the model currently misses.** If your eye can tell
   it's a person, label it. This is the entire fix for the night-distance miss.
 - **box** — cardboard boxes / cartons (your inventory, delivery boxes).
-- **packet** — bagged/wrapped/parcel items.
-- **car / truck / bus / motorcycle / bicycle** — only if they appear and matter
-  (forecourt/lot). Indoor store: usually none.
+- **packet** — bagged/wrapped/parcel product items.
+- **bag** — handbags, backpacks, shopping bags a *person is carrying*
+  (concealment context — a bag is where shoplifted items go). Not a shelf item.
+- **car / truck** — only if they appear and matter (forecourt/lot). Indoor
+  store: usually none. (bicycle/motorcycle/bus are **not** classes — don't label them.)
 
 **Do NOT label the phantoms.** In a `false_positive/` frame the model drew a
 "dog" or "knife" on a shelf or mannequin. **Leave that spot empty.** By handing
@@ -107,20 +109,19 @@ label-studio start          # opens http://localhost:8080
 1. **Create Project** → `store-vision`.
 2. **Data Import** → drag in all three folders from `finetune/images_to_label/`.
 3. **Labeling Setup** → template **"Object Detection with Bounding Boxes"**, then
-   paste this label config (all 8 classes, hotkeys 1–8):
+   paste the config from **`finetune/label_studio_config.xml`** (6 classes,
+   hotkeys 1–6, colors per DESIGN §2.5):
 
    ```xml
    <View>
      <Image name="image" value="$image"/>
      <RectangleLabels name="label" toName="image">
-       <Label value="person"     hotkey="1" background="#FF5C4D"/>
-       <Label value="box"        hotkey="2" background="#00CC66"/>
-       <Label value="packet"     hotkey="3" background="#3399FF"/>
-       <Label value="car"        hotkey="4" background="#FFB347"/>
-       <Label value="truck"      hotkey="5" background="#B084FF"/>
-       <Label value="bus"        hotkey="6" background="#FFD166"/>
-       <Label value="motorcycle" hotkey="7" background="#06D6A0"/>
-       <Label value="bicycle"    hotkey="8" background="#EF476F"/>
+       <Label value="person" background="#4EA8FF" hotkey="1"/>
+       <Label value="box"    background="#2DD4BF" hotkey="2"/>
+       <Label value="packet" background="#14B8A6" hotkey="3"/>
+       <Label value="car"    background="#A78BFA" hotkey="4"/>
+       <Label value="truck"  background="#8B5CF6" hotkey="5"/>
+       <Label value="bag"    background="#F472B6" hotkey="6"/>
      </RectangleLabels>
    </View>
    ```
@@ -150,8 +151,9 @@ finetune/dataset/
 
 ## 5. Optional speed-up for the DAYTIME box frames only
 
-For bright `boxes/` frames, you may pre-fill person/vehicle boxes with the COCO
-model and then just add box/packet by hand:
+For bright `boxes/` frames, you may pre-fill person/vehicle/bag boxes with the
+COCO model (handbag/backpack/suitcase are auto-mapped to `bag`) and then just add
+box/packet by hand:
 
 ```bash
 PYTHONPATH=agent/YOLOX python finetune/scripts/autolabel_coco.py \

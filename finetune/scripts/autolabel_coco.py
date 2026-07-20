@@ -31,8 +31,13 @@ from yolox.data.data_augment import preproc as preprocess
 from yolox.data.datasets import COCO_CLASSES
 from yolox.utils import demo_postprocess, multiclass_nms
 
-# COCO classes we are willing to auto-label (the model is reliable on these).
-AUTOLABEL_SOURCE = {"person", "bicycle", "car", "motorcycle", "bus", "truck"}
+# COCO classes we auto-label from (the pretrained model is reliable on these),
+# and how they map onto OUR class names. handbag/backpack/suitcase collapse to
+# the single 'bag' class. A mapped name is only kept if it's in classes.txt, so
+# dropping e.g. bicycle from classes.txt automatically stops labeling it.
+COCO_REMAP = {"handbag": "bag", "backpack": "bag", "suitcase": "bag"}
+AUTOLABEL_COCO = {"person", "car", "truck", "motorcycle", "bus", "bicycle",
+                  "handbag", "backpack", "suitcase"}
 
 
 def build_session(model_path):
@@ -78,8 +83,11 @@ def main():
         class_names = [ln.strip() for ln in f
                        if ln.strip() and not ln.strip().startswith("#")]
     name_to_id = {n: i + 1 for i, n in enumerate(class_names)}
-    source = AUTOLABEL_SOURCE & set(class_names)
-    print(f"auto-labeling classes: {sorted(source)}")
+    # COCO names we'll read, whose mapped target exists in classes.txt
+    source = {c for c in AUTOLABEL_COCO
+              if COCO_REMAP.get(c, c) in name_to_id}
+    print(f"auto-labeling COCO classes: {sorted(source)} "
+          f"-> targets {sorted({COCO_REMAP.get(c, c) for c in source})}")
 
     session = build_session(args.model)
 
@@ -90,7 +98,8 @@ def main():
     print(f"{len(paths)} images")
 
     images, annotations = [], []
-    ann_id, per_class = 1, {n: 0 for n in source}
+    ann_id = 1
+    per_class = {COCO_REMAP.get(c, c): 0 for c in source}
     for img_id, p in enumerate(paths):
         frame = cv2.imread(p)
         if frame is None:
@@ -100,9 +109,10 @@ def main():
                        "width": W, "height": H})
         for x1, y1, x2, y2, score, cls in detect(session, frame, input_shape,
                                                   args.score, args.nms):
-            name = COCO_CLASSES[int(cls)]
-            if name not in source:
+            coco_name = COCO_CLASSES[int(cls)]
+            if coco_name not in source:
                 continue
+            name = COCO_REMAP.get(coco_name, coco_name)  # e.g. handbag -> bag
             bw, bh = float(x2 - x1), float(y2 - y1)
             annotations.append({
                 "id": ann_id, "image_id": img_id,
@@ -122,7 +132,7 @@ def main():
                    "categories": categories}, f)
 
     print(f"\nwrote {args.out}: {len(images)} images, {len(annotations)} auto boxes")
-    for n in sorted(source):
+    for n in sorted(per_class):          # keyed by OUR class names (e.g. 'bag')
         print(f"  {n:<12}{per_class[n]}")
     print("box/packet are NOT auto-labeled — you draw those by hand.")
 

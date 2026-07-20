@@ -52,7 +52,8 @@ _C = {
 }
 _GROUP = {"person": "person"}
 _GROUP.update({n: "vehicle" for n in ("car", "truck", "bus", "motorcycle", "bicycle")})
-_GROUP.update({n: "bag" for n in ("handbag", "backpack", "suitcase")})
+# 'bag' is our fine-tuned class; handbag/backpack/suitcase are its COCO sources
+_GROUP.update({n: "bag" for n in ("bag", "handbag", "backpack", "suitcase")})
 _GROUP.update({n: "inventory" for n in ("box", "packet")})
 
 

@@ -1,6 +1,6 @@
 """YOLOX-S fine-tuning experiment for Store Vision — single combined model.
 
-8 classes: person, bicycle, car, motorcycle, bus, truck, box, packet
+6 classes: person, car, truck, box, packet, bag
 (kept in sync with finetune/classes.txt).
 
 Person + vehicle boxes are auto-labeled by the existing COCO model
@@ -30,7 +30,7 @@ class Exp(MyExp):
         self.exp_name = "yolox_s_store"
 
         # --- dataset ---
-        self.num_classes = 8  # person, bicycle, car, motorcycle, bus, truck, box, packet
+        self.num_classes = 6  # person, car, truck, box, packet, bag
         self.data_dir = os.environ.get("YOLOX_DATA_DIR", "finetune/dataset")
         self.train_ann = "instances_train2017.json"
         self.val_ann = "instances_val2017.json"

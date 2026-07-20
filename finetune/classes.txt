@@ -1,8 +1,6 @@
 person
-bicycle
 car
-motorcycle
-bus
 truck
 box
 packet
+bag

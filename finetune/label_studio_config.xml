@@ -1,0 +1,15 @@
+<!-- Store Vision labeling config — paste into Label Studio -> Labeling Setup.
+     6 classes, kept in sync with finetune/classes.txt. Colors follow DESIGN
+     §2.5 (person blue, vehicle violet, inventory teal, bag pink), spread so
+     each class is distinguishable while labeling. -->
+<View>
+  <Image name="image" value="$image"/>
+  <RectangleLabels name="label" toName="image">
+    <Label value="person" background="#4EA8FF" hotkey="1"/>
+    <Label value="box"    background="#2DD4BF" hotkey="2"/>
+    <Label value="packet" background="#14B8A6" hotkey="3"/>
+    <Label value="car"    background="#A78BFA" hotkey="4"/>
+    <Label value="truck"  background="#8B5CF6" hotkey="5"/>
+    <Label value="bag"    background="#F472B6" hotkey="6"/>
+  </RectangleLabels>
+</View>
