@@ -307,6 +307,19 @@ detection would.
 
 ## 7. License, Verification & Limits System
 
+### 7.0 Model encryption — the enforcement that actually matters
+
+The ONNX model ships **AES-encrypted**. Its decryption key is derived from the signed
+license token + device fingerprint, and it is decrypted **into memory only** — never
+written to disk in plaintext.
+
+**No valid license → no usable model → no detection.** A cracked binary runs fine and
+detects nothing. This is the primary anti-piracy measure; everything below (tokens,
+device binding, obfuscation) supports it.
+
+Full detail: **TRD.md §6.2 Layer 1**. Implemented in **IMPLEMENTATION.md Phase 7b,
+step 3**.
+
 ### 7.1 License key model
 
 Every site gets a **license key** bound to one installed agent.
